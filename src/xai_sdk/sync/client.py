@@ -67,7 +67,7 @@ class Client(BaseClient):
 
         self.auth = auth.Client(self._api_channel)
         self.batch = batch.Client(self._api_channel)
-        self.chat = chat.Client(self._api_channel)
+        self.chat = chat.Client(self._api_channel, api_host=api_host)
         self.collections = collections.Client(self._api_channel, self._management_channel)
         self.files = files.Client(self._api_channel)
         self.image = image.Client(self._api_channel)

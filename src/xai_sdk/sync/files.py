@@ -122,7 +122,7 @@ class Client(BaseClient):
             res = self._stub.UploadFile(chunks)
             if not should_disable_sensitive_attributes():
                 span.set_attribute("file.id", res.id)
-                span.set_attribute("file.name", res.filename)
+                span.set_attribute("file.filename", res.filename)
             return res
 
     def batch_upload(
@@ -131,7 +131,7 @@ class Client(BaseClient):
         *,
         batch_size: int = 50,
         on_file_complete: Optional[BatchUploadCallback] = None,
-    ) -> dict[int, Union[files_pb2.File, BaseException]]:
+    ) -> dict[int, Union[files_pb2.File, Exception]]:
         """Batch upload multiple files using concurrent threads.
 
         This method always handles partial failures gracefully - if some uploads fail, the successful
@@ -145,19 +145,19 @@ class Client(BaseClient):
                 directly for bytes, or wrap bytes in io.BytesIO with a name attribute.
             batch_size: Maximum number of concurrent uploads. Defaults to 50.
             on_file_complete: Optional callback invoked after each file upload completes (success or failure).
-                The callback receives three arguments: (index: int, file: str | BinaryIO, result: File | BaseException).
+                The callback receives three arguments: (index: int, file: str | BinaryIO, result: File | Exception).
                 Use this to track progress or log individual file results in real-time.
 
         Returns:
             Dictionary mapping file indices (0-based position in input list) to results.
-            Successful uploads map to File protos, failed uploads map to BaseException objects.
+            Successful uploads map to File protos, failed uploads map to Exception objects.
 
         Examples:
             >>> # Upload multiple files from paths
             >>> files = ["doc1.pdf", "doc2.pdf", "doc3.pdf"]
             >>> results = client.files.batch_upload(files)
             >>> for idx, result in results.items():
-            >>>     if isinstance(result, BaseException):
+            >>>     if isinstance(result, Exception):
             >>>         print(f"Failed to upload {files[idx]}: {result}")
             >>>     else:
             >>>         print(f"Uploaded {files[idx]}: {result.file_id}")
@@ -167,7 +167,7 @@ class Client(BaseClient):
             >>> def on_complete(idx, file, result):
             >>>     nonlocal completed
             >>>     completed += 1
-            >>>     status = "success" if not isinstance(result, BaseException) else "failure"
+            >>>     status = "success" if not isinstance(result, Exception) else "failure"
             >>>     print(f"[{completed}/{len(files)}] {status}: {file}")
             >>>
             >>> results = client.files.batch_upload(files, on_file_complete=on_complete)
@@ -178,7 +178,7 @@ class Client(BaseClient):
             >>>
             >>> # Get only successful uploads
             >>> results = client.files.batch_upload(files)
-            >>> successful = {idx: f for idx, f in results.items() if not isinstance(f, BaseException)}
+            >>> successful = {idx: f for idx, f in results.items() if not isinstance(f, Exception)}
             >>> print(f"Uploaded {len(successful)}/{len(files)} files successfully")
             >>>
             >>> # Control concurrency
@@ -186,15 +186,17 @@ class Client(BaseClient):
         """
         if len(files) == 0:
             raise ValueError("files cannot be empty - please provide at least one file to upload")
+        if batch_size <= 0:
+            raise ValueError("batch_size must be a positive integer")
 
-        results: dict[int, Union[files_pb2.File, BaseException]] = {}
+        results: dict[int, Union[files_pb2.File, Exception]] = {}
 
-        def upload_file(index: int, file: Union[str, BinaryIO]) -> tuple[int, Union[files_pb2.File, BaseException]]:
+        def upload_file(index: int, file: Union[str, BinaryIO]) -> tuple[int, Union[files_pb2.File, Exception]]:
             """Upload a single file and return its index and result."""
             try:
                 result = self.upload(file)
                 return (index, result)
-            except BaseException as e:
+            except Exception as e:
                 return (index, e)
 
         with ThreadPoolExecutor(max_workers=batch_size) as executor:

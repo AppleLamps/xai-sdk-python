@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Any, Callable, Optional
 
 import grpc
 
@@ -12,8 +12,17 @@ class AuthInterceptor(grpc.UnaryUnaryClientInterceptor, grpc.UnaryStreamClientIn
         self._api_key = api_key
         self._metadata = metadata
 
-    def _add_auth_metadata(self, client_call_details):
-        """Adds authentication metadata to the call details."""
+    def _add_auth_metadata(
+        self, client_call_details: grpc.ClientCallDetails
+    ) -> grpc.ClientCallDetails:
+        """Adds authentication metadata to the call details.
+
+        Args:
+            client_call_details: The original call details.
+
+        Returns:
+            Updated call details with authentication metadata added.
+        """
         existing_metadata = list(client_call_details.metadata or [])
 
         auth_header = ("authorization", f"Bearer {self._api_key}")
@@ -24,12 +33,22 @@ class AuthInterceptor(grpc.UnaryUnaryClientInterceptor, grpc.UnaryStreamClientIn
 
         return client_call_details._replace(metadata=existing_metadata)
 
-    def intercept_unary_unary(self, continuation, client_call_details, request):
+    def intercept_unary_unary(
+        self,
+        continuation: Callable[[grpc.ClientCallDetails, Any], Any],
+        client_call_details: grpc.ClientCallDetails,
+        request: Any,
+    ) -> Any:
         """Intercept unary-unary calls to add authentication metadata."""
         new_details = self._add_auth_metadata(client_call_details)
         return continuation(new_details, request)
 
-    def intercept_unary_stream(self, continuation, client_call_details, request):
+    def intercept_unary_stream(
+        self,
+        continuation: Callable[[grpc.ClientCallDetails, Any], Any],
+        client_call_details: grpc.ClientCallDetails,
+        request: Any,
+    ) -> Any:
         """Intercept unary-stream calls to add authentication metadata."""
         new_details = self._add_auth_metadata(client_call_details)
         return continuation(new_details, request)
@@ -46,15 +65,40 @@ class TimeoutInterceptor(grpc.UnaryUnaryClientInterceptor, grpc.UnaryStreamClien
         """
         self.timeout = timeout
 
-    def _intercept_call(self, continuation, client_call_details, request):
+    def _intercept_call(
+        self,
+        continuation: Callable[[grpc.ClientCallDetails, Any], Any],
+        client_call_details: grpc.ClientCallDetails,
+        request: Any,
+    ) -> Any:
+        """Internal method to intercept calls and set timeout.
+
+        Args:
+            continuation: The function to call to continue the RPC.
+            client_call_details: The original call details.
+            request: The request message.
+
+        Returns:
+            The result of continuing the RPC with the modified call details.
+        """
         client_call_details = client_call_details._replace(timeout=self.timeout)
         return continuation(client_call_details, request)
 
-    def intercept_unary_unary(self, continuation, client_call_details, request):
+    def intercept_unary_unary(
+        self,
+        continuation: Callable[[grpc.ClientCallDetails, Any], Any],
+        client_call_details: grpc.ClientCallDetails,
+        request: Any,
+    ) -> Any:
         """Intercepts a unary-unary RPC call."""
         return self._intercept_call(continuation, client_call_details, request)
 
-    def intercept_unary_stream(self, continuation, client_call_details, request):
+    def intercept_unary_stream(
+        self,
+        continuation: Callable[[grpc.ClientCallDetails, Any], Any],
+        client_call_details: grpc.ClientCallDetails,
+        request: Any,
+    ) -> Any:
         """Intercepts a unary-stream RPC call."""
         return self._intercept_call(continuation, client_call_details, request)
 
@@ -73,8 +117,17 @@ class UnaryUnaryAuthAioInterceptor(grpc.aio.UnaryUnaryClientInterceptor):
         self._api_key = api_key
         self._metadata = metadata
 
-    def _add_auth_metadata(self, client_call_details):
-        """Adds authentication metadata to the call details."""
+    def _add_auth_metadata(
+        self, client_call_details: grpc.aio.ClientCallDetails
+    ) -> grpc.aio.ClientCallDetails:
+        """Adds authentication metadata to the call details.
+
+        Args:
+            client_call_details: The original call details.
+
+        Returns:
+            Updated call details with authentication metadata added.
+        """
         existing_metadata = list(client_call_details.metadata or [])
 
         auth_header = ("authorization", f"Bearer {self._api_key}")
@@ -85,7 +138,12 @@ class UnaryUnaryAuthAioInterceptor(grpc.aio.UnaryUnaryClientInterceptor):
 
         return client_call_details._replace(metadata=existing_metadata)
 
-    async def intercept_unary_unary(self, continuation, client_call_details, request):
+    async def intercept_unary_unary(
+        self,
+        continuation: Callable[[grpc.aio.ClientCallDetails, Any], Any],
+        client_call_details: grpc.aio.ClientCallDetails,
+        request: Any,
+    ) -> Any:
         """Intercept async unary-unary calls to add authentication metadata."""
         new_details = self._add_auth_metadata(client_call_details)
         return await continuation(new_details, request)  # type: ignore
@@ -99,8 +157,17 @@ class UnaryStreamAuthAioInterceptor(grpc.aio.UnaryStreamClientInterceptor):
         self._api_key = api_key
         self._metadata = metadata
 
-    def _add_auth_metadata(self, client_call_details):
-        """Adds authentication metadata to the call details."""
+    def _add_auth_metadata(
+        self, client_call_details: grpc.aio.ClientCallDetails
+    ) -> grpc.aio.ClientCallDetails:
+        """Adds authentication metadata to the call details.
+
+        Args:
+            client_call_details: The original call details.
+
+        Returns:
+            Updated call details with authentication metadata added.
+        """
         existing_metadata = list(client_call_details.metadata or [])
 
         auth_header = ("authorization", f"Bearer {self._api_key}")
@@ -111,7 +178,12 @@ class UnaryStreamAuthAioInterceptor(grpc.aio.UnaryStreamClientInterceptor):
 
         return client_call_details._replace(metadata=existing_metadata)
 
-    async def intercept_unary_stream(self, continuation, client_call_details, request):
+    async def intercept_unary_stream(
+        self,
+        continuation: Callable[[grpc.aio.ClientCallDetails, Any], Any],
+        client_call_details: grpc.aio.ClientCallDetails,
+        request: Any,
+    ) -> Any:
         """Intercept async unary-stream calls to add authentication metadata."""
         new_details = self._add_auth_metadata(client_call_details)
         return await continuation(new_details, request)  # type: ignore[reportAwaitable]
@@ -124,7 +196,12 @@ class UnaryUnaryTimeoutAioInterceptor(grpc.aio.UnaryUnaryClientInterceptor):
         """Initialize the UnaryUnaryTimeoutAioInterceptor with timeout value."""
         self.timeout = timeout
 
-    async def intercept_unary_unary(self, continuation, client_call_details, request):
+    async def intercept_unary_unary(
+        self,
+        continuation: Callable[[grpc.aio.ClientCallDetails, Any], Any],
+        client_call_details: grpc.aio.ClientCallDetails,
+        request: Any,
+    ) -> Any:
         """Intercept async unary-unary calls to set timeout."""
         client_call_details = client_call_details._replace(timeout=self.timeout)  # type: ignore
         return await continuation(client_call_details, request)
@@ -137,7 +214,12 @@ class UnaryStreamTimeoutAioInterceptor(grpc.aio.UnaryStreamClientInterceptor):
         """Initialize the UnaryStreamTimeoutAioInterceptor with timeout value."""
         self.timeout = timeout
 
-    async def intercept_unary_stream(self, continuation, client_call_details, request):
+    async def intercept_unary_stream(
+        self,
+        continuation: Callable[[grpc.aio.ClientCallDetails, Any], Any],
+        client_call_details: grpc.aio.ClientCallDetails,
+        request: Any,
+    ) -> Any:
         """Intercept async unary-stream calls to set timeout."""
         client_call_details = client_call_details._replace(timeout=self.timeout)  # type: ignore
         return await continuation(client_call_details, request)  # type: ignore[reportAwaitable]

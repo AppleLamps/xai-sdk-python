@@ -639,7 +639,9 @@ async def test_use_encrypted_content(client: AsyncClient):
 
 @mock.patch("xai_sdk.aio.chat.tracer")
 @pytest.mark.asyncio(loop_scope="session")
-async def test_sample_creates_span_with_correct_attributes(mock_tracer: mock.MagicMock, client: AsyncClient):
+async def test_sample_creates_span_with_correct_attributes(
+    mock_tracer: mock.MagicMock, client: AsyncClient, test_server_port: int
+):
     mock_span = mock.MagicMock()
     mock_tracer.start_as_current_span.return_value.__enter__.return_value = mock_span
 
@@ -659,8 +661,8 @@ async def test_sample_creates_span_with_correct_attributes(mock_tracer: mock.Mag
         "gen_ai.request.presence_penalty": 0.0,
         "gen_ai.request.temperature": 1.0,
         "gen_ai.request.parallel_tool_calls": True,
-        "server.port": 443,
-        "server.address": "api.x.ai",
+        "server.port": test_server_port,
+        "server.address": "localhost",
         "gen_ai.conversation.id": conversation_id,
         "gen_ai.prompt.0.role": "user",
         "gen_ai.prompt.0.content": "Hello, how are you?",
@@ -695,7 +697,7 @@ async def test_sample_creates_span_with_correct_attributes(mock_tracer: mock.Mag
 @mock.patch("xai_sdk.aio.chat.tracer")
 @pytest.mark.asyncio(loop_scope="session")
 async def test_sample_creates_span_without_sensitive_attributes_when_disabled(
-    mock_tracer: mock.MagicMock, client: AsyncClient
+    mock_tracer: mock.MagicMock, client: AsyncClient, test_server_port: int
 ):
     """Test that sensitive attributes are not included when XAI_SDK_DISABLE_SENSITIVE_TELEMETRY_ATTRIBUTES is set."""
     mock_span = mock.MagicMock()
@@ -713,8 +715,8 @@ async def test_sample_creates_span_without_sensitive_attributes_when_disabled(
         "gen_ai.provider.name": "xai",
         "gen_ai.output.type": "text",
         "gen_ai.request.model": "grok-4-1-fast-reasoning",
-        "server.port": 443,
-        "server.address": "api.x.ai",
+        "server.port": test_server_port,
+        "server.address": "localhost",
     }
 
     mock_tracer.start_as_current_span.assert_called_once_with(
@@ -729,7 +731,9 @@ async def test_sample_creates_span_without_sensitive_attributes_when_disabled(
 
 @mock.patch("xai_sdk.aio.chat.tracer")
 @pytest.mark.asyncio(loop_scope="session")
-async def test_sample_creates_span_with_correct_optional_attributes(mock_tracer: mock.MagicMock, client: AsyncClient):
+async def test_sample_creates_span_with_correct_optional_attributes(
+    mock_tracer: mock.MagicMock, client: AsyncClient, test_server_port: int
+):
     mock_span = mock.MagicMock()
     mock_tracer.start_as_current_span.return_value.__enter__.return_value = mock_span
 
@@ -775,8 +779,8 @@ async def test_sample_creates_span_with_correct_optional_attributes(mock_tracer:
         "gen_ai.request.presence_penalty": 0.1,
         "gen_ai.request.temperature": 0.5,
         "gen_ai.request.parallel_tool_calls": False,
-        "server.port": 443,
-        "server.address": "api.x.ai",
+        "server.port": test_server_port,
+        "server.address": "localhost",
         "gen_ai.conversation.id": conversation_id,
         "gen_ai.request.max_tokens": 100,
         "gen_ai.request.seed": 123,
@@ -806,7 +810,9 @@ async def test_sample_creates_span_with_correct_optional_attributes(mock_tracer:
 
 @mock.patch("xai_sdk.aio.chat.tracer")
 @pytest.mark.asyncio(loop_scope="session")
-async def test_sample_batch_creates_span_with_correct_attributes(mock_tracer: mock.MagicMock, client: AsyncClient):
+async def test_sample_batch_creates_span_with_correct_attributes(
+    mock_tracer: mock.MagicMock, client: AsyncClient, test_server_port: int
+):
     mock_span = mock.MagicMock()
     mock_tracer.start_as_current_span.return_value.__enter__.return_value = mock_span
 
@@ -826,8 +832,8 @@ async def test_sample_batch_creates_span_with_correct_attributes(mock_tracer: mo
         "gen_ai.request.presence_penalty": 0.0,
         "gen_ai.request.temperature": 1.0,
         "gen_ai.request.parallel_tool_calls": True,
-        "server.port": 443,
-        "server.address": "api.x.ai",
+        "server.port": test_server_port,
+        "server.address": "localhost",
         "gen_ai.conversation.id": conversation_id,
         "gen_ai.prompt.0.role": "user",
         "gen_ai.prompt.0.content": "Hello, how are you?",
@@ -866,7 +872,9 @@ async def test_sample_batch_creates_span_with_correct_attributes(mock_tracer: mo
 
 @mock.patch("xai_sdk.aio.chat.tracer")
 @pytest.mark.asyncio(loop_scope="session")
-async def test_stream_creates_span_with_correct_attributes(mock_tracer: mock.MagicMock, client: AsyncClient):
+async def test_stream_creates_span_with_correct_attributes(
+    mock_tracer: mock.MagicMock, client: AsyncClient, test_server_port: int
+):
     mock_span = mock.MagicMock()
     mock_tracer.start_as_current_span.return_value.__enter__.return_value = mock_span
 
@@ -894,8 +902,8 @@ async def test_stream_creates_span_with_correct_attributes(mock_tracer: mock.Mag
         "gen_ai.request.presence_penalty": 0.0,
         "gen_ai.request.temperature": 1.0,
         "gen_ai.request.parallel_tool_calls": True,
-        "server.port": 443,
-        "server.address": "api.x.ai",
+        "server.port": test_server_port,
+        "server.address": "localhost",
         "gen_ai.conversation.id": conversation_id,
         "gen_ai.prompt.0.role": "user",
         "gen_ai.prompt.0.content": "Hello, how are you?",
@@ -931,7 +939,9 @@ async def test_stream_creates_span_with_correct_attributes(mock_tracer: mock.Mag
 
 @mock.patch("xai_sdk.aio.chat.tracer")
 @pytest.mark.asyncio(loop_scope="session")
-async def test_stream_batch_creates_span_with_correct_attributes(mock_tracer: mock.MagicMock, client: AsyncClient):
+async def test_stream_batch_creates_span_with_correct_attributes(
+    mock_tracer: mock.MagicMock, client: AsyncClient, test_server_port: int
+):
     mock_span = mock.MagicMock()
     mock_tracer.start_as_current_span.return_value.__enter__.return_value = mock_span
 
@@ -960,8 +970,8 @@ async def test_stream_batch_creates_span_with_correct_attributes(mock_tracer: mo
         "gen_ai.request.presence_penalty": 0.0,
         "gen_ai.request.temperature": 1.0,
         "gen_ai.request.parallel_tool_calls": True,
-        "server.port": 443,
-        "server.address": "api.x.ai",
+        "server.port": test_server_port,
+        "server.address": "localhost",
         "gen_ai.conversation.id": conversation_id,
         "gen_ai.prompt.0.role": "user",
         "gen_ai.prompt.0.content": "Hello, how are you?",
@@ -999,7 +1009,9 @@ async def test_stream_batch_creates_span_with_correct_attributes(mock_tracer: mo
 
 @mock.patch("xai_sdk.aio.chat.tracer")
 @pytest.mark.asyncio(loop_scope="session")
-async def test_parse_creates_span_with_correct_attributes(mock_tracer: mock.MagicMock, client: AsyncClient):
+async def test_parse_creates_span_with_correct_attributes(
+    mock_tracer: mock.MagicMock, client: AsyncClient, test_server_port: int
+):
     from pydantic import BaseModel
 
     class TestResponse(BaseModel):
@@ -1033,8 +1045,8 @@ async def test_parse_creates_span_with_correct_attributes(mock_tracer: mock.Magi
         "gen_ai.request.presence_penalty": 0.0,
         "gen_ai.request.temperature": 1.0,
         "gen_ai.request.parallel_tool_calls": True,
-        "server.port": 443,
-        "server.address": "api.x.ai",
+        "server.port": test_server_port,
+        "server.address": "localhost",
         "gen_ai.conversation.id": conversation_id,
         "gen_ai.prompt.0.role": "user",
         "gen_ai.prompt.0.content": "What's the weather in London?",
@@ -1068,7 +1080,9 @@ async def test_parse_creates_span_with_correct_attributes(mock_tracer: mock.Magi
 
 @mock.patch("xai_sdk.aio.chat.tracer")
 @pytest.mark.asyncio(loop_scope="session")
-async def test_defer_creates_span_with_correct_attributes(mock_tracer: mock.MagicMock, client: AsyncClient):
+async def test_defer_creates_span_with_correct_attributes(
+    mock_tracer: mock.MagicMock, client: AsyncClient, test_server_port: int
+):
     mock_span = mock.MagicMock()
     mock_tracer.start_as_current_span.return_value.__enter__.return_value = mock_span
 
@@ -1088,8 +1102,8 @@ async def test_defer_creates_span_with_correct_attributes(mock_tracer: mock.Magi
         "gen_ai.request.presence_penalty": 0.0,
         "gen_ai.request.temperature": 1.0,
         "gen_ai.request.parallel_tool_calls": True,
-        "server.port": 443,
-        "server.address": "api.x.ai",
+        "server.port": test_server_port,
+        "server.address": "localhost",
         "gen_ai.conversation.id": conversation_id,
         "gen_ai.prompt.0.role": "user",
         "gen_ai.prompt.0.content": "Hello, how are you?",
@@ -1123,7 +1137,9 @@ async def test_defer_creates_span_with_correct_attributes(mock_tracer: mock.Magi
 
 @mock.patch("xai_sdk.aio.chat.tracer")
 @pytest.mark.asyncio(loop_scope="session")
-async def test_defer_batch_creates_span_with_correct_attributes(mock_tracer: mock.MagicMock, client: AsyncClient):
+async def test_defer_batch_creates_span_with_correct_attributes(
+    mock_tracer: mock.MagicMock, client: AsyncClient, test_server_port: int
+):
     mock_span = mock.MagicMock()
     mock_tracer.start_as_current_span.return_value.__enter__.return_value = mock_span
 
@@ -1147,8 +1163,8 @@ async def test_defer_batch_creates_span_with_correct_attributes(mock_tracer: moc
         "gen_ai.request.presence_penalty": 0.0,
         "gen_ai.request.temperature": 1.0,
         "gen_ai.request.parallel_tool_calls": True,
-        "server.port": 443,
-        "server.address": "api.x.ai",
+        "server.port": test_server_port,
+        "server.address": "localhost",
         "gen_ai.conversation.id": conversation_id,
         "gen_ai.prompt.0.role": "user",
         "gen_ai.prompt.0.content": "Hello, how are you?",
@@ -1187,7 +1203,7 @@ async def test_defer_batch_creates_span_with_correct_attributes(mock_tracer: moc
 @pytest.mark.asyncio(loop_scope="session")
 @mock.patch("xai_sdk.aio.chat.tracer")
 async def test_chat_with_function_calling_creates_span_with_correct_attributes(
-    mock_tracer: mock.MagicMock, client: AsyncClient
+    mock_tracer: mock.MagicMock, client: AsyncClient, test_server_port: int
 ):
     mock_span = mock.MagicMock()
     mock_tracer.start_as_current_span.return_value.__enter__.return_value = mock_span
@@ -1217,8 +1233,8 @@ async def test_chat_with_function_calling_creates_span_with_correct_attributes(
         "gen_ai.request.presence_penalty": 0.0,
         "gen_ai.request.temperature": 1.0,
         "gen_ai.request.parallel_tool_calls": True,
-        "server.port": 443,
-        "server.address": "api.x.ai",
+        "server.port": test_server_port,
+        "server.address": "localhost",
         "gen_ai.conversation.id": conversation_id,
         "gen_ai.prompt.0.role": "user",
         "gen_ai.prompt.0.content": "What's the weather in London?",
@@ -1263,7 +1279,7 @@ async def test_chat_with_function_calling_creates_span_with_correct_attributes(
 @pytest.mark.asyncio(loop_scope="session")
 @mock.patch("xai_sdk.aio.chat.tracer")
 async def test_chat_with_function_call_result_creates_span_with_correct_attributes(
-    mock_tracer: mock.MagicMock, client: AsyncClient
+    mock_tracer: mock.MagicMock, client: AsyncClient, test_server_port: int
 ):
     mock_span = mock.MagicMock()
     mock_tracer.start_as_current_span.return_value.__enter__.return_value = mock_span
@@ -1299,8 +1315,8 @@ async def test_chat_with_function_call_result_creates_span_with_correct_attribut
         "gen_ai.request.presence_penalty": 0.0,
         "gen_ai.request.temperature": 1.0,
         "gen_ai.request.parallel_tool_calls": True,
-        "server.port": 443,
-        "server.address": "api.x.ai",
+        "server.port": test_server_port,
+        "server.address": "localhost",
         "gen_ai.conversation.id": conversation_id,
         "gen_ai.prompt.0.role": "user",
         "gen_ai.prompt.0.content": "What's the weather in London?",

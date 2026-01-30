@@ -1,8 +1,11 @@
 import asyncio
+import logging
 import os
 from typing import Any, AsyncIterator, BinaryIO, Callable, Iterator, Literal, Protocol, Union
 
 import grpc
+
+logger = logging.getLogger(__name__)
 
 from .proto import files_pb2, files_pb2_grpc
 
@@ -25,7 +28,7 @@ class ProgressBarLike(Protocol):
 ProgressCallback = Union[Callable[[int, int], None], Callable[[int], None], ProgressBarLike, None]
 
 # Type for batch upload completion callbacks
-BatchUploadCallback = Callable[[int, Union[str, BinaryIO], Union["files_pb2.File", BaseException]], None]
+BatchUploadCallback = Callable[[int, Union[str, BinaryIO], Union["files_pb2.File", Exception]], None]
 
 
 class BaseClient:
@@ -63,6 +66,10 @@ def _invoke_progress(
             progress(cumulative_bytes, total_bytes)  # type: ignore
         except TypeError:
             # If that fails, try calling with just incremental bytes (tqdm.update style)
+            logger.debug(
+                "Progress callback does not accept (bytes_uploaded, total_bytes) signature, "
+                "falling back to single-argument (chunk_size) signature."
+            )
             progress(chunk_size)  # type: ignore
 
 
@@ -261,8 +268,12 @@ async def _async_chunk_file_from_path(
     Yields:
         UploadFileChunk messages containing either init metadata or data.
     """
+    # Use asyncio to avoid blocking the event loop
+    loop = asyncio.get_running_loop()
+
+    # Get file metadata in executor to avoid blocking
     filename = os.path.basename(file_path)
-    total_bytes = os.path.getsize(file_path)
+    total_bytes = await loop.run_in_executor(None, os.path.getsize, file_path)
     bytes_uploaded = 0
 
     # First chunk: initialization with metadata
@@ -272,9 +283,6 @@ async def _async_chunk_file_from_path(
             purpose="",  # Purpose is unused by backend
         )
     )
-
-    # Use asyncio to read file without blocking
-    loop = asyncio.get_event_loop()
 
     def read_chunk(f):
         return f.read(_CHUNK_SIZE)
@@ -328,7 +336,7 @@ async def _async_chunk_file_from_fileobj(
     )
 
     # Use asyncio to read file without blocking
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
 
     def read_chunk():
         return file_obj.read(_CHUNK_SIZE)

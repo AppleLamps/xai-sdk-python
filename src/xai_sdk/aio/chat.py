@@ -7,7 +7,7 @@ from typing import AsyncIterator, Optional, Sequence, TypeVar
 from opentelemetry.trace import SpanKind
 from pydantic import BaseModel
 
-from ..chat import BaseChat, BaseClient, Chunk, Response
+from ..chat import BaseChat, BaseClient, Chunk, Response, _get_cached_json_schema
 from ..poll_timer import PollTimer
 from ..proto import chat_pb2, deferred_pb2
 from ..telemetry import get_tracer
@@ -19,7 +19,7 @@ class Client(BaseClient["Chat"]):
     """Async Client for interacting with the `Chat` API."""
 
     def _make_chat(self, conversation_id: Optional[str], **settings) -> "Chat":
-        return Chat(self._stub, conversation_id, **settings)
+        return Chat(self._stub, conversation_id, api_host=self._api_host, **settings)
 
     async def get_stored_completion(self, response_id: str) -> Sequence[Response]:
         """Retrieves a stored chat completion response by its ID.
@@ -295,7 +295,7 @@ class Chat(BaseChat):
         self.proto.response_format.CopyFrom(
             chat_pb2.ResponseFormat(
                 format_type=chat_pb2.FormatType.FORMAT_TYPE_JSON_SCHEMA,
-                schema=json.dumps(shape.model_json_schema()),
+                schema=_get_cached_json_schema(shape),
             )
         )
 

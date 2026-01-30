@@ -1,5 +1,6 @@
 import abc
 import datetime
+import functools
 import json
 from collections import Counter, defaultdict
 from typing import Any, Generic, Optional, Sequence, TypeVar, Union
@@ -7,6 +8,19 @@ from typing import Any, Generic, Optional, Sequence, TypeVar, Union
 import grpc
 from pydantic import BaseModel
 from typing_extensions import Self
+
+
+@functools.lru_cache(maxsize=128)
+def _get_cached_json_schema(model_class: type[BaseModel]) -> str:
+    """Cache JSON schema generation for Pydantic models.
+
+    Args:
+        model_class: A Pydantic BaseModel class.
+
+    Returns:
+        JSON string representation of the model's schema.
+    """
+    return json.dumps(model_class.model_json_schema())
 
 from .meta import ProtoDecorator
 from .proto import chat_pb2, chat_pb2_grpc, image_pb2, sample_pb2, usage_pb2
@@ -30,10 +44,17 @@ class BaseClient(abc.ABC, Generic[T]):
     """Base Client for interacting with the `Chat` API."""
 
     _stub: chat_pb2_grpc.ChatStub
+    _api_host: str
 
-    def __init__(self, channel: Union[grpc.Channel, grpc.aio.Channel]):
-        """Creates a new client based on a gRPC channel."""
+    def __init__(self, channel: Union[grpc.Channel, grpc.aio.Channel], api_host: str = "api.x.ai"):
+        """Creates a new client based on a gRPC channel.
+
+        Args:
+            channel: The gRPC channel to use for communication.
+            api_host: The API host address (used for telemetry attributes).
+        """
         self._stub = chat_pb2_grpc.ChatStub(channel)
+        self._api_host = api_host
 
     def create(
         self,
@@ -184,7 +205,7 @@ class BaseClient(abc.ABC, Generic[T]):
         elif isinstance(response_format, type) and issubclass(response_format, BaseModel):
             response_format_pb = chat_pb2.ResponseFormat(
                 format_type=chat_pb2.FORMAT_TYPE_JSON_SCHEMA,
-                schema=json.dumps(response_format.model_json_schema()),
+                schema=_get_cached_json_schema(response_format),
             )
         else:
             response_format_pb = response_format
@@ -245,12 +266,14 @@ class BaseChat(ProtoDecorator[chat_pb2.GetCompletionsRequest]):
     """Utility class for simplifying the interaction with Chat requests and responses."""
 
     _stub: chat_pb2_grpc.ChatStub
+    _api_host: str
 
     def __init__(
         self,
         stub: chat_pb2_grpc.ChatStub,
         conversation_id: Optional[str],
         batch_request_id: Optional[str],
+        api_host: str = "api.x.ai",
         **settings,
     ) -> None:
         """Prepares a new chat request.
@@ -260,12 +283,14 @@ class BaseChat(ProtoDecorator[chat_pb2.GetCompletionsRequest]):
             conversation_id: The ID of the conversation.
             batch_request_id: The ID of the batch request, should only be set when creating a chat completion
                 for a batch request.
+            api_host: The API host address (used for telemetry attributes).
             **settings: See `chat_pb2.GetCompletionsRequest`.
         """
         super().__init__(chat_pb2.GetCompletionsRequest(**settings))
         self._stub = stub
         self._conversation_id = conversation_id
         self._batch_request_id = batch_request_id
+        self._api_host = api_host
 
     def append(self, message: Union[chat_pb2.Message, "Response"]) -> Self:
         """Adds a new message to the conversation history, enabling multi-turn interactions.
@@ -376,13 +401,25 @@ class BaseChat(ProtoDecorator[chat_pb2.GetCompletionsRequest]):
 
     def _make_span_request_attributes(self) -> dict[str, Any]:  # noqa: C901, PLR0912
         """Creates a dictionary with all relevant request attributes to be set on the span as it is created."""
+        # Parse port from api_host if present (e.g., "localhost:8080"), otherwise default to 443
+        if ":" in self._api_host:
+            host, port_str = self._api_host.rsplit(":", 1)
+            try:
+                port = int(port_str)
+            except ValueError:
+                host = self._api_host
+                port = 443
+        else:
+            host = self._api_host
+            port = 443
+
         attributes: dict[str, Any] = {
             "gen_ai.operation.name": "chat",
             "gen_ai.provider.name": "xai",
             "gen_ai.output.type": "text",
             "gen_ai.request.model": self._proto.model,
-            "server.port": 443,
-            "server.address": "api.x.ai",
+            "server.port": port,
+            "server.address": host,
         }
 
         if should_disable_sensitive_attributes():

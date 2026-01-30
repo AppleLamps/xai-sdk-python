@@ -299,7 +299,7 @@ For privacy reasons, you may want to disable the collection of sensitive attribu
 
 ## Timeouts
 
-The xAI SDK allows you to set a timeout for API requests during client initialization. This timeout applies to all RPCs and methods used with that client instance. The default timeout is 15 minutes (900 seconds).
+The xAI SDK allows you to set a timeout for API requests during client initialization. This timeout applies to all RPCs and methods used with that client instance. The default timeout is 27 minutes (1620 seconds).
 
 It is not currently possible to specify timeouts for an individual RPC/client method.
 
@@ -412,6 +412,37 @@ In this example, the custom policy reduces the maximum number of attempts to 3, 
 
 Note that when setting a custom `grpc.service_config`, it will override the default retry policy.
 
+## Connection Lifecycle
+
+The xAI SDK maintains persistent gRPC connections to the API servers. These connections are automatically managed and will attempt to reconnect if temporarily disrupted. However, there are some important considerations for long-running applications:
+
+- **Connection Pooling**: Each client instance maintains its own gRPC channel. The channel handles connection pooling and keepalive internally.
+- **Keepalive**: The SDK configures keepalive settings (30-second intervals) to detect and recover from network issues.
+- **Automatic Retries**: Transient `UNAVAILABLE` errors are automatically retried with exponential backoff (see Retries section above).
+- **Channel Recreation**: For very long-running applications or after extended network outages, you may need to create a new client instance. Use the context manager pattern or explicitly call `close()` to clean up resources:
+
+```python
+# Using context manager (recommended)
+with Client() as client:
+    # Use client...
+    pass  # Channel is automatically closed
+
+# Or manually close when done
+client = Client()
+try:
+    # Use client...
+finally:
+    client.close()
+```
+
+For asynchronous clients:
+
+```python
+async with AsyncClient() as client:
+    # Use client...
+    pass  # Channel is automatically closed
+```
+
 ## Accessing Underlying Proto Objects
 
 In rare cases, you might need to access the raw proto object returned from an API call. While the xAI SDK is designed to expose most commonly needed fields directly on the response objects for ease of use, there could be scenarios where accessing the underlying proto object is necessary for advanced or custom processing.
@@ -445,7 +476,7 @@ Below is a table of common gRPC status codes you might encounter when using the 
 |---------------------------|------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------|
 | `UNKNOWN`                 | An unknown error occurred.                                             | An unexpected issue occurred on the server side, not specifically related to the request.               |
 | `INVALID_ARGUMENT`        | The client specified an invalid argument.                              | An invalid argument was provided to the model/endpoint, such as incorrect parameters or malformed input.|
-| `DEADLINE_EXCEEDED`       | The deadline for the request expired before the operation completed.   | Raised if the request exceeds the timeout specified by the client (default is 900 seconds, configurable during client instantiation). |
+| `DEADLINE_EXCEEDED`       | The deadline for the request expired before the operation completed.   | Raised if the request exceeds the timeout specified by the client (default is 1620 seconds / 27 minutes, configurable during client instantiation). |
 | `NOT_FOUND`               | A specified resource was not found.                                    | A requested model or resource does not exist.                                                           |
 | `PERMISSION_DENIED`       | The caller does not have permission to execute the specified operation.| The API key is disabled, blocked, or lacks sufficient permissions to access a specific model or feature. |
 | `UNAUTHENTICATED`         | The request does not have valid authentication credentials.            | The API key is missing, invalid, or expired.                                                            |

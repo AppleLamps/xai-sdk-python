@@ -1,4 +1,5 @@
 import datetime
+import threading
 from typing import Literal, Optional, Union
 
 import grpc
@@ -86,6 +87,8 @@ class BaseClient:
     _documents_stub: documents_pb2_grpc.DocumentsStub
     _files_stub: files_pb2_grpc.FilesStub
     _management_api_channel: Optional[Union[grpc.Channel, grpc.aio.Channel]]
+    _collections_stub_lock: threading.Lock
+    _cached_collections_stub: Optional[collections_pb2_grpc.CollectionsStub]
 
     def __init__(
         self,
@@ -96,13 +99,18 @@ class BaseClient:
         self._documents_stub = documents_pb2_grpc.DocumentsStub(api_channel)
         self._files_stub = files_pb2_grpc.FilesStub(api_channel)
         self._management_api_channel = management_api_channel
+        self._collections_stub_lock = threading.Lock()
+        self._cached_collections_stub = None
 
     @property
     def _collections_stub(self) -> collections_pb2_grpc.CollectionsStub:
         if self._management_api_channel is None:
             raise ValueError("Please provide a management API key.")
-        if not hasattr(self, "_cached_collections_stub"):
-            self._cached_collections_stub = collections_pb2_grpc.CollectionsStub(self._management_api_channel)
+        if self._cached_collections_stub is None:
+            with self._collections_stub_lock:
+                # Double-check locking pattern
+                if self._cached_collections_stub is None:
+                    self._cached_collections_stub = collections_pb2_grpc.CollectionsStub(self._management_api_channel)
         return self._cached_collections_stub
 
 
